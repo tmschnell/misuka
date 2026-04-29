@@ -1,5 +1,6 @@
 #include <mitsuba/core/stream.h>
 #include <mitsuba/core/dstream.h>
+#include <mitsuba/core/object.h>
 #include <sstream>
 #include <cctype>
 
