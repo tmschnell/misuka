@@ -128,6 +128,31 @@ public:
         Log(Debug, "Running render() ..");
         m_stop = false;
 
+        // Query the sensor's medium for speed of sound if available
+        // Otherwise use the integrator's speed_of_sound parameter
+        float effective_speed_of_sound = m_speed_of_sound;
+        const Medium *sensor_medium = sensor->medium();
+        if (sensor_medium) {
+            // Get speed of sound from medium (may need scalar extraction in Dr.Jit variants)
+            Float speed_from_medium = sensor_medium->get_speed_of_sound();
+            // For scalar variants, direct assignment; for Dr.Jit, use indexing
+            if constexpr (dr::is_jit_v<Float>) {
+                // In JIT mode, extract the first element
+                effective_speed_of_sound = (float)speed_from_medium[0];
+            } else {
+                // In scalar mode, direct conversion
+                effective_speed_of_sound = (float)speed_from_medium;
+            }
+            Log(Info, "Using speed of sound from sensor's medium: %.2f m/s", 
+                effective_speed_of_sound);
+        } else {
+            Log(Info, "No medium attached to sensor, using parameter speed_of_sound: %.2f m/s", 
+                effective_speed_of_sound);
+        }
+        
+        // Temporarily store the effective speed for use in sample()
+        m_effective_speed_of_sound = effective_speed_of_sound;
+
         Film *film = sensor->film();
         ScalarVector2u film_size = film->crop_size();
         if (film->sample_border())
@@ -379,7 +404,7 @@ public:
         Float eta                      = 1.f;
         UInt32 depth                   = 0;
         Float distance                 = 0.f;
-        const ScalarFloat max_distance = m_max_time * m_speed_of_sound;
+        const ScalarFloat max_distance = m_max_time * m_effective_speed_of_sound;
 
         // If m_hide_emitters == true, directly visible emitters are hidden
         Mask valid_ray                 = !m_hide_emitters;
@@ -747,6 +772,7 @@ protected:
 protected:
     float m_max_time;
     float m_speed_of_sound;
+    float m_effective_speed_of_sound;
 };
 
 MI_IMPLEMENT_CLASS_VARIANT(AcousticPathIntegrator, MonteCarloIntegrator)

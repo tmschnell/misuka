@@ -168,13 +168,14 @@ MI_PY_EXPORT(Sensor) {
     using PySensor = PySensor<Float, Spectrum>;
     using Properties = PropertiesV<Float>;
 
-    auto sensor = MI_PY_TRAMPOLINE_CLASS(PySensor, Sensor, Endpoint)
+        auto sensor = MI_PY_TRAMPOLINE_CLASS(PySensor, Sensor, Endpoint)
         .def(nb::init<const Properties&>())
         .def_method(Sensor, shutter_open)
         .def_method(Sensor, shutter_open_time)
         .def_method(Sensor, needs_aperture_sample)
         .def("film", nb::overload_cast<>(&Sensor::film, nb::const_), D(Sensor, film))
         .def("sampler", nb::overload_cast<>(&Sensor::sampler, nb::const_), D(Sensor, sampler))
+        .def("medium", nb::overload_cast<>(&Sensor::medium, nb::const_))
         .def("kappa", nb::overload_cast<>(&Sensor::kappa, nb::const_), D(Sensor, kappa))
         .def_field(PySensor, m_needs_sample_2, D(Endpoint, m_needs_sample_3))
         .def_field(PySensor, m_needs_sample_3, D(Endpoint, m_needs_sample_3))

@@ -17,6 +17,7 @@ class AcousticADIntegrator(RBIntegrator):
 
 
         self.speed_of_sound = props.get("speed_of_sound", 343.)
+        self.effective_speed_of_sound = self.speed_of_sound  # Will be updated in render()
         if self.max_time <= 0. or self.speed_of_sound <= 0.:
             raise ValueError("\"max_time\" and \"speed_of_sound\" must be set to a value greater than zero!")
 
@@ -53,6 +54,20 @@ class AcousticADIntegrator(RBIntegrator):
 
         if isinstance(sensor, int):
             sensor = scene.sensors()[sensor]
+
+        # Query the sensor's medium for speed of sound if available
+        # Otherwise use the integrator's speed_of_sound parameter
+        if sensor.medium() is not None:
+            effective_speed_of_sound = float(sensor.medium().get_speed_of_sound())
+            mi.Log(mi.LogLevel.Info, 
+                   f"Using speed of sound from sensor's medium: {effective_speed_of_sound:.2f} m/s")
+        else:
+            effective_speed_of_sound = self.speed_of_sound
+            mi.Log(mi.LogLevel.Info, 
+                   f"No medium attached to sensor, using parameter speed_of_sound: {effective_speed_of_sound:.2f} m/s")
+        
+        # Store the effective speed for use in sample()
+        self.effective_speed_of_sound = effective_speed_of_sound
 
         film = sensor.film()
 
@@ -236,7 +251,7 @@ class AcousticADIntegrator(RBIntegrator):
         # --------------------- Configure loop state ----------------------
 
         distance     = mi.Float(0.0)
-        max_distance = self.max_time * self.speed_of_sound
+        max_distance = self.max_time * self.effective_speed_of_sound
 
         # Copy input arguments to avoid mutating the caller's state
         ray = mi.Ray3f(ray)
@@ -425,6 +440,12 @@ class AcousticADIntegrator(RBIntegrator):
         if isinstance(sensor, int):
             sensor = scene.sensors()[sensor]
 
+        # Query the sensor's medium for speed of sound if available
+        if sensor.medium() is not None:
+            self.effective_speed_of_sound = float(sensor.medium().get_speed_of_sound())
+        else:
+            self.effective_speed_of_sound = self.speed_of_sound
+
         film = sensor.film()
 
         # Disable derivatives in all of the following
@@ -476,6 +497,12 @@ class AcousticADIntegrator(RBIntegrator):
 
         if isinstance(sensor, int):
             sensor = scene.sensors()[sensor]
+
+        # Query the sensor's medium for speed of sound if available
+        if sensor.medium() is not None:
+            self.effective_speed_of_sound = float(sensor.medium().get_speed_of_sound())
+        else:
+            self.effective_speed_of_sound = self.speed_of_sound
 
         film = sensor.film()
 

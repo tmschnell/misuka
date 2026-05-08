@@ -85,11 +85,16 @@ template <typename Ptr, typename Cls> void bind_medium_generic(Cls &cls) {
                 return ptr->transmittance_eval_pdf(mi, si, active); },
             "mi"_a, "si"_a, "active"_a,
             D(Medium, transmittance_eval_pdf))
-       .def("get_scattering_coefficients",
+              .def("get_scattering_coefficients",
             [](Ptr ptr, const MediumInteraction3f &mi, Mask active = true) {
                 return ptr->get_scattering_coefficients(mi, active); },
             "mi"_a, "active"_a=true,
-            D(Medium, get_scattering_coefficients));
+            D(Medium, get_scattering_coefficients))
+        .def("get_speed_of_sound",
+            [](Ptr ptr) { 
+                // dr::slice extracts the first element, works for both scalar and array types
+                return dr::slice(ptr->get_speed_of_sound(), 0);
+            });
 }
 
 MI_PY_EXPORT(Medium) {

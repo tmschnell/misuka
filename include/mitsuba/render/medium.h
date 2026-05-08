@@ -32,6 +32,9 @@ public:
     get_scattering_coefficients(const MediumInteraction3f &mi,
                                 Mask active = true) const = 0;
 
+    /// Returns the speed of sound in the medium in m/s (for acoustic rendering)
+    virtual Float get_speed_of_sound() const;
+
     /**
      * \brief Sample a free-flight distance in the medium.
      *
@@ -131,6 +134,7 @@ MI_CALL_TEMPLATE_BEGIN(Medium)
     DRJIT_CALL_METHOD(sample_interaction)
     DRJIT_CALL_METHOD(transmittance_eval_pdf)
     DRJIT_CALL_METHOD(get_scattering_coefficients)
+    DRJIT_CALL_METHOD(get_speed_of_sound)
 MI_CALL_TEMPLATE_END(Medium)
 
 //! @}

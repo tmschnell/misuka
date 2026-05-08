@@ -141,10 +141,37 @@ public:
 
         m_scale = props.get<ScalarFloat>("scale", 1.0f);
         m_has_spectral_extinction = props.get<bool>("has_spectral_extinction", true);
+
+        // Speed of sound parameters (parse as ScalarFloat, then convert to Float)
+        m_speed_of_sound = (Float)props.get<ScalarFloat>("speed_of_sound", 343.2f);
+
+        // Atmospheric parameters for speed of sound calculation
+        // These can be used to compute speed_of_sound if desired
+        m_temperature_celsius = (Float)props.get<ScalarFloat>("temperature_celsius", 20.0f);
+        m_relative_humidity = (Float)props.get<ScalarFloat>("relative_humidity", -1.0f);  // -1 means not provided
+        m_atmospheric_pressure = (Float)props.get<ScalarFloat>("atmospheric_pressure", 101325.0f);
+        m_co2_ppm = (Float)props.get<ScalarFloat>("co2_ppm", 427.35f);
+        m_speed_method = props.get<std::string>("speed_method", "default");
+
+        // If a specific speed_of_sound is not provided but atmosphere params are,
+        // compute it using the simple formula (temperature only)
+        if (!props.has_property("speed_of_sound") && m_speed_method != "default") {
+            m_speed_of_sound = compute_speed_of_sound_simple(m_temperature_celsius);
+        }
+    }
+
+    // Helper function: compute speed of sound from temperature (ISO 9613-1 Formula A.5)
+    static Float compute_speed_of_sound_simple(Float temperature_celsius) {
+        Float t_ref = 20.0f;
+        Float t_0 = -273.15f;
+        Float c_ref = 343.2f;
+        return c_ref * dr::sqrt((temperature_celsius - t_0) / (t_ref - t_0));
     }
 
     void traverse(TraversalCallback *callback) override {
         callback->put_parameter("scale", m_scale,        +ParamFlags::NonDifferentiable);
+        callback->put_parameter("speed_of_sound", m_speed_of_sound, +ParamFlags::NonDifferentiable);
+        callback->put_parameter("temperature_celsius", m_temperature_celsius, +ParamFlags::NonDifferentiable);
         callback->put_object("albedo",   m_albedo.get(), +ParamFlags::Differentiable);
         callback->put_object("sigma_t",  m_sigmat.get(), +ParamFlags::Differentiable);
         Base::traverse(callback);
@@ -180,12 +207,18 @@ public:
         return { true, 0.f, dr::Infinity<Float> };
     }
 
+    Float get_speed_of_sound() const override {
+        return m_speed_of_sound;
+    }
+
     std::string to_string() const override {
         std::ostringstream oss;
         oss << "HomogeneousMedium[" << std::endl
             << "  albedo = " << string::indent(m_albedo) << "," << std::endl
             << "  sigma_t = " << string::indent(m_sigmat) << "," << std::endl
-            << "  scale = " << string::indent(m_scale)  << std::endl
+            << "  scale = " << string::indent(m_scale) << "," << std::endl
+            << "  speed_of_sound = " << m_speed_of_sound << " m/s," << std::endl
+            << "  temperature_celsius = " << m_temperature_celsius << std::endl
             << "]";
         return oss.str();
     }
@@ -194,6 +227,12 @@ public:
 private:
     ref<Volume> m_sigmat, m_albedo;
     ScalarFloat m_scale;
+    Float m_speed_of_sound;
+    Float m_temperature_celsius;
+    Float m_relative_humidity;
+    Float m_atmospheric_pressure;
+    Float m_co2_ppm;
+    std::string m_speed_method;
 };
 
 MI_IMPLEMENT_CLASS_VARIANT(HomogeneousMedium, Medium)
