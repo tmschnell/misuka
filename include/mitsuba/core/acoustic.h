@@ -62,29 +62,40 @@ Value speed_of_sound(Value temperature,
     }
 
     if (selected_method == "simple") {
-        // ISO 9613-1 (Formula A.5)
-        return 331.3f * dr::sqrt(1 + temperature / 273.15f);
+        if (temperature < -20.0f || temperature > 50.0f) {
+            throw std::invalid_argument("Temperature out of range for simple method (-20°C to 50°C).");
+        }
+        return 343.2f * dr::sqrt((temperature + 273.15f) / 293.15f);
     } else if (selected_method == "ideal_gas") {
         // Ideal gas calculation based on Ostashev and Wilson
-        Value T = temperature + 273.15f; // Convert to Kelvin
-        Value R = 287.05f; // Specific gas constant for dry air in J/(kg*K)
-        Value gamma = 1.4f; // Adiabatic index for dry air
-        return dr::sqrt(gamma * R * T);
+        float R = 8.314f; // J/(mol*K)
+        float gamma_a = 1.400f;
+        float gamma_w = 1.330f;
+        float mu_a = 28.97*1e-3f; //kg/mol
+        float mu_w = 18.02*1e-3f; //kg/mol
+        float R_a = R / mu_a;
+        float p;
+
+        if (saturation_vapor_pressure == null) {
+            float e_s = 6.1094 * dr::exp((17.625 * temperature) / (temperature + 243.04));
+            p = 100 * e_s;
+        }
+        else {
+            p = saturation_vapor_pressure;
+        }
+        
+        float e = p * relative_humidity;
+        float alpha = alpha = mu_a / mu_w;
+        float delta = (1 - (1/gamma_a)) / (1 - (1/gamma_w));
+        float nu = (gamma_a - 1) / (gamma_w - 1);
+        float C = (e/P) / (alpha * (1 - e/P));
+
+        return dr::sqrt((gamma_a * R_a * temperature_kelvin * (1 + (alpha * (1 + delta - nu) - 1) * C)));
+
+        return;
     } else if (selected_method == "cramer") {
         // Cramer's method
-        Value T = temperature + 273.15f; // Convert to Kelvin
-        Value P = atmospheric_pressure; // Pressure in Pascal
-        Value H = relative_humidity; // Relative humidity (0 to 1)
-        Value S = saturation_vapor_pressure; // Saturation vapor pressure in Pascal
-        Value C = co2_ppm; // CO2 concentration in ppm
-
-        Value a = 331.3f; // Speed of sound at 0°C in m/s
-        Value b = 0.6f; // Temperature coefficient in m/s per °C
-        Value c = 0.0124f; // Humidity coefficient in m/s per %RH
-        Value d = -0.0001f; // Pressure coefficient in m/s per Pa
-        Value e = -0.00001f; // CO2 coefficient in m/s per ppm
-
-        return a + b * temperature + c * H * 100 + d * P + e * C;
+        return;
     } else {
         throw std::invalid_argument("Invalid method specified for speed of sound calculation.");
     }
